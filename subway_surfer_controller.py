@@ -373,9 +373,9 @@ class GestureInterpreter:
               hip_cy - self.baseline_y > self.cfg.DUCK_POSITION_THRESHOLD * 0.5):
             action = Action.DUCK
         # Lean left / right
-        elif shoulder_cx < 0.5 - self.cfg.LEAP_THRESHOLD:
+        elif shoulder_cx < 0.5 - self.cfg.LEAN_THRESHOLD:
             action = Action.LEFT
-        elif shoulder_cx > 0.5 + self.cfg.LEAP_THRESHOLD:
+        elif shoulder_cx > 0.5 + self.cfg.LEAN_THRESHOLD:
             action = Action.RIGHT
 
         # --- Stability filter ---
