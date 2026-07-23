@@ -165,46 +165,49 @@ class PoseDetector:
 
     def draw_landmarks(self, frame_bgr, smoothed_landmarks):
         """
-        Draw pose skeleton onto frame_bgr.
-        `smoothed_landmarks` should be a list of (x,y,z) tuples
-        (the output of SmoothedLandmarks.update()).
+        Draw pose skeleton onto frame_bgr using OpenCV primitives.
+        `smoothed_landmarks` is a list of (x,y,z) tuples (normalised 0..1).
         Returns annotated BGR frame.
         """
         if smoothed_landmarks is None:
             return frame_bgr
 
         annotated = frame_bgr.copy()
-        style = self._style.get_default_pose_landmarks_style()
+        h, w = annotated.shape[:2]
 
-        # Build a NormalizedLandmarkList-like object for drawing_utils
-        # drawing_utils.draw_landmarks accepts a list of NormalizedLandmark objects
-        from mediapipe.tasks.python.vision.drawing_utils import DrawingSpec
-        # We pass the smoothed list directly — it has .x, .y, .z attributes
-        # Actually, drawing_utils expects a specific format. Let's build a simple
-        # stand-in: a list of objects with .x, .y, .z
-        class _Lm:
-            __slots__ = ('x', 'y', 'z')
-            def __init__(self, x, y, z):
-                self.x = x
-                self.y = y
-                self.z = z
-        pose_lm = [_Lm(x, y, z) for (x, y, z) in smoothed_landmarks]
+        # Draw landmarks as green circles
+        for (x, y, z) in smoothed_landmarks:
+            cx = int(x * w)
+            cy = int(y * h)
+            cv2.circle(annotated, (cx, cy), 4, (0, 255, 0), -1)
 
-        self._du.draw_landmarks(
-            image=annotated,
-            landmark_list=pose_lm,
-            connections=self._connections,
-            landmark_drawing_spec=style,
-            connection_drawing_spec=DrawingSpec(
-                color=(0, 255, 0), thickness=2
-            ),
-        )
+        # Draw pose connections as green lines
+        POSE_CONNECTIONS = [
+            (0,1),(1,2),(2,3),(3,7),
+            (0,4),(4,5),(5,6),(6,8),
+            (9,10),
+            (11,12),(11,13),(13,15),(15,17),
+            (15,19),(15,21),(17,19),
+            (12,14),(14,16),(16,18),
+            (16,20),(16,22),(18,20),
+            (11,23),(12,24),(23,24),
+            (23,25),(24,26),(25,27),
+            (26,28),(27,29),(28,30),
+            (29,31),(30,32),
+        ]
+        for (a, b) in POSE_CONNECTIONS:
+            if a >= len(smoothed_landmarks) or b >= len(smoothed_landmarks):
+                continue
+            x1 = int(smoothed_landmarks[a][0] * w)
+            y1 = int(smoothed_landmarks[a][1] * h)
+            x2 = int(smoothed_landmarks[b][0] * w)
+            y2 = int(smoothed_landmarks[b][1] * h)
+            cv2.line(annotated, (x1,y1), (x2,y2), (0,255,0), 2)
 
-        # Draw the baseline Y as a horizontal red line (for debug)
-        if smoothed_landmarks and hasattr(self, '_debug_baseline_y'):
-            h, w = annotated.shape[:2]
+        # Draw baseline as red horizontal line
+        if smoothed_landmarks and hasattr(self, "_debug_baseline_y"):
             by = int(self._debug_baseline_y * h)
-            cv2.line(annotated, (0, by), (w, by), (0, 0, 255), 1)
+            cv2.line(annotated, (0,by), (w,by), (0,0,255), 1)
 
         return annotated
 
