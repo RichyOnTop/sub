@@ -205,10 +205,15 @@ class PoseDetector:
             cv2.line(annotated, (x1,y1), (x2,y2), (0,255,0), 2)
 
         # Draw baseline as red horizontal line
-        if smoothed_landmarks and hasattr(self, "_debug_baseline_y"):
-            by = int(self._debug_baseline_y * h)
-            cv2.line(annotated, (0,by), (w,by), (0,0,255), 1)
-
+        # --- Draw baseline Y as a red horizontal line (debug) ---
+        _by = getattr(self, '_debug_baseline_y', None)
+        if _by is not None:
+            try:
+                h2, w2 = annotated.shape[:2]
+                by2 = int(float(_by) * h2)
+                cv2.line(annotated, (0, by2), (w2, by2), (0, 0, 255), 1)
+            except (TypeError, ValueError):
+                pass  # baseline_y not a valid number yet
         return annotated
 
     def close(self):
@@ -679,8 +684,9 @@ class Application:
 
                 # --- Draw skeleton (using SMOOTHED landmarks) ---
                 if smoothed is not None:
-                    # Pass smoothed data to detector's draw function
-                    self.detector._debug_baseline_y = self.interpreter.baseline_y
+                    # Only pass baseline_y to detector when it's valid
+                    if self.interpreter.baseline_y is not None:
+                        self.detector._debug_baseline_y = self.interpreter.baseline_y
                     frame = self.detector.draw_landmarks(frame, smoothed)
 
                 # --- Interpret gesture ---
